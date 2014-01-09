@@ -7,16 +7,10 @@ import org.specs2.mutable._
 import play.api.libs.functional.syntax._
 
 object FormatSpec extends Specification {
-	case class User(id: Long, name: String/*, friends: List[User]*/)
-
-	// implicit val UserFormat: Format[UrlFormEncoded, User] = Formatting[UrlFormEncoded] { __ =>
-	// 	import Rules._; import Writes._
-	// 	((__ \ "id").format[Long] ~
-	//    (__ \ "name").format[String])(User.apply _, unlift(User.unapply _))
-	// }
+	case class User(id: Long, name: String)
+	val luigi = User(1, "Luigi")
 
 	"Format" should {
-    val luigi = User(1, "Luigi")
 
 		"serialize and deserialize primitives" in {
 			import Rules._
@@ -60,6 +54,20 @@ object FormatSpec extends Specification {
 			f.validate(m) mustEqual(Success(Seq("CAFEBABE", "FOOBAR")))
       f.writes(Seq("CAFEBABE", "FOOBAR")) mustEqual(m)
     }
+
+    "serialize and deserialize User case class" in {
+    	import Rules._
+    	import Writes._
+
+	    implicit val userF: Format[UrlFormEncoded, User] = Formatting[UrlFormEncoded] { __ =>
+				((__ \ "id").format[Long] ~
+			   (__ \ "name").format[String])(User.apply _, unlift(User.unapply _))
+			}
+
+			val m = Map("id" -> Seq("1"), "name" -> Seq("Luigi"))
+			userF.validate(m) mustEqual(Success(luigi))
+		}
+
 	}
 
 }

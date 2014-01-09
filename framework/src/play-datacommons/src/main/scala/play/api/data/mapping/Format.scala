@@ -24,6 +24,18 @@ object Format extends DefaultFormat {
     def inmap[A, B](fa: Format[I, A], f1: A => B, f2: B => A): Format[I, B] =
     	Format[I, B](fa.fmap(f1), fa.contramap(f2))
   }
+
+  implicit def functionalCanBuildFormat[I](implicit rcb: FunctionalCanBuild[({ type λ[O] = Rule[I, O] })#λ], wcb: FunctionalCanBuild[({ type λ[O] = Write[O, I] })#λ]): FunctionalCanBuild[({ type λ[O] = Format[I, O] })#λ] =
+    new FunctionalCanBuild[({ type λ[O] = Format[I, O] })#λ] {
+      def apply[A, B](fa: Format[I, A], fb: Format[I, B]): Format[I, A ~ B] =
+        Format[I, A ~ B](rcb(fa, fb), wcb(fa, fb))
+    }
+
+  // XXX: Helps the compiler a bit
+  import play.api.libs.functional.syntax._
+  implicit def fboF[I, O](implicit rcb: FunctionalCanBuild[({ type λ[O] = Rule[I, O] })#λ], wcb: FunctionalCanBuild[({ type λ[O] = Write[O, I] })#λ]) =
+    toFunctionalBuilderOps[({ type λ[O] = Format[I, O] })#λ, O](_: Format[I, O])(functionalCanBuildFormat)
+
 }
 
 /**
