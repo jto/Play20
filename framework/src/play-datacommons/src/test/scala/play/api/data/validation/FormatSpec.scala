@@ -52,7 +52,7 @@ object FormatSpec extends Specification {
 
     "serialize and deserialize Seq[String]" in {
 			import Rules._
-			import Writes.{ seq => ssl, _ }
+			import Writes._
 
 			val f = Formatting[UrlFormEncoded] { __ => (__ \ "ids").format[Seq[String]] }
 			val m = Map("ids[0]" -> Seq("CAFEBABE"), "ids[1]" -> Seq("FOOBAR"))

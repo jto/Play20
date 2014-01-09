@@ -55,18 +55,18 @@ object Writes extends DefaultWrites with DefaultMonoids with GenericWrites[JsVal
   implicit def anyval[T <: AnyVal] = tToJs[T]
   implicit def javanumber[T <: java.lang.Number] = tToJs[T]
 
-  implicit def boolean = Write[Boolean, JsValue](JsBoolean.apply _)
+  implicit def booleanW = Write[Boolean, JsValue](JsBoolean.apply _)
 
   implicit def seqToJsArray[I](implicit w: Write[I, JsValue]): Write[Seq[I], JsValue] =
     Write(ss => JsArray(ss.map(w.writes _)))
 
-  def option[I, J](r: => Write[I, J])(implicit w: Path => Write[J, JsObject]): Path => Write[Option[I], JsObject] =
-    super.option[I, J, JsObject](r, Json.obj())
+  def optionW[I, J](r: => Write[I, J])(implicit w: Path => Write[J, JsObject]): Path => Write[Option[I], JsObject] =
+    super.optionW[I, J, JsObject](r, Json.obj())
 
-  implicit def option[I](implicit w: Path => Write[I, JsObject]): Path => Write[Option[I], JsObject] =
-    option(Write.zero[I])
+  implicit def optionW[I](implicit w: Path => Write[I, JsObject]): Path => Write[Option[I], JsObject] =
+    optionW(Write.zero[I])
 
-  implicit def map[I](implicit w: Write[I, JsValue]) = Write[Map[String, I], JsObject] { m =>
+  implicit def mapW[I](implicit w: Write[I, JsValue]) = Write[Map[String, I], JsObject] { m =>
     JsObject(m.mapValues(w.writes).toSeq)
   }
 

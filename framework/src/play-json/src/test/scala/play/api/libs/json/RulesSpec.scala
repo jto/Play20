@@ -195,7 +195,6 @@ object RulesSpec extends Specification {
       }
 
       "Map[String, V]" in {
-        import Rules.{ map => mm }
         (Path \ "n").read[JsValue, Map[String, String]].validate(Json.obj("n" -> Json.obj("foo" -> "bar"))) mustEqual(Success(Map("foo" -> "bar")))
         (Path \ "n").read[JsValue, Map[String, Int]].validate(Json.obj("n" -> Json.obj("foo" -> 4, "bar" -> 5))) mustEqual(Success(Map("foo" -> 4, "bar" -> 5)))
         (Path \ "x").read[JsValue, Map[String, Int]].validate(Json.obj("n" -> Json.obj("foo" -> 4, "bar" -> "frack"))) mustEqual(Failure(Seq(Path \ "x" -> Seq(ValidationError("error.required")))))
@@ -283,16 +282,16 @@ object RulesSpec extends Specification {
     }
 
     "lift validations to seq validations" in {
-      (Path \ "foo").from[JsValue](seq(notEmpty)).validate(Json.obj("foo" -> Seq("bar")))
+      (Path \ "foo").from[JsValue](seqR(notEmpty)).validate(Json.obj("foo" -> Seq("bar")))
         .get must haveTheSameElementsAs(Seq("bar"))
 
       From[JsValue]{ __ =>
         (__ \ "foo").read(
-          (__ \ "foo").read(seq(notEmpty)))
+          (__ \ "foo").read(seqR(notEmpty)))
       }.validate(Json.obj("foo" -> Json.obj("foo" -> Seq("bar"))))
         .get must haveTheSameElementsAs(Seq("bar"))
 
-      (Path \ "n").from[JsValue](seq(notEmpty))
+      (Path \ "n").from[JsValue](seqR(notEmpty))
         .validate(Json.parse("""{"n":["foo", ""]}""")) mustEqual(Failure(Seq(Path \ "n" \ 1 -> Seq(ValidationError("error.required")))))
     }
 
@@ -404,15 +403,15 @@ object RulesSpec extends Specification {
 
       val infoValidation = From[JsValue] { __ =>
          ((__ \ "label").read(notEmpty) ~
-          (__ \ "email").read(option(email)) ~
-          (__ \ "phones").read(seq(notEmpty))) (ContactInformation.apply _)
+          (__ \ "email").read(optionR(email)) ~
+          (__ \ "phones").read(seqR(notEmpty))) (ContactInformation.apply _)
       }
 
       val contactValidation = From[JsValue] { __ =>
         ((__ \ "firstname").read(notEmpty) ~
          (__ \ "lastname").read(notEmpty) ~
          (__ \ "company").read[Option[String]] ~
-         (__ \ "informations").read(seq(infoValidation))) (Contact.apply _)
+         (__ \ "informations").read(seqR(infoValidation))) (Contact.apply _)
       }
 
       val expected =
@@ -443,18 +442,18 @@ object RulesSpec extends Specification {
       "using explicit notation" in {
         lazy val w: Rule[JsValue, RecUser] = From[JsValue]{ __ =>
           ((__ \ "name").read[String] ~
-           (__ \ "friends").read(seq(w)))(RecUser.apply _)
+           (__ \ "friends").read(seqR(w)))(RecUser.apply _)
         }
         w.validate(m) mustEqual Success(u)
 
         lazy val w2: Rule[JsValue, RecUser] =
           ((Path \ "name").read[JsValue, String] ~
-           (Path \ "friends").from[JsValue](seq(w2)))(RecUser.apply _)
+           (Path \ "friends").from[JsValue](seqR(w2)))(RecUser.apply _)
         w2.validate(m) mustEqual Success(u)
 
         lazy val w3: Rule[JsValue, User1] = From[JsValue]{ __ =>
           ((__ \ "name").read[String] ~
-           (__ \ "friend").read(option(w3)))(User1.apply _)
+           (__ \ "friend").read(optionR(w3)))(User1.apply _)
         }
         w3.validate(m1) mustEqual Success(u1)
       }
