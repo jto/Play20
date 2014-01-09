@@ -136,3 +136,21 @@ case class Writer[I](path: Path = Path(Nil)) {
   def \(idx: Int): Writer[I] = Writer(path \ idx)
   def \(child: PathNode): Writer[I] = Writer(path \ child)
 }
+
+trait Formatting[I] {
+  def apply[O](f: Formatter[I] => Format[I, O]) = f(Formatter[I]())
+}
+object Formatting {
+  def apply[I] = new Formatting[I] {}
+}
+
+case class Formatter[I](path: Path = Path(Nil)) {
+
+  // def format[J](sub: => Format[J, O])(implicit r: Path => Format[I, J]): Format[I, O] = ???
+  def format[O](implicit f: Path => Format[I, O]): Format[I, O] =
+    f(path)
+
+  def \(key: String): Formatter[I] = Formatter(path \ key)
+  def \(idx: Int): Formatter[I] = Formatter(path \ idx)
+  def \(child: PathNode): Formatter[I] = Formatter(path \ child)
+}

@@ -53,8 +53,8 @@ class Path(val path: List[PathNode]) {
 
   def from[I] = new Deferred(Reader[I](this))
 
-  // def read[I, J, O](sub: => Rule[J, O])(implicit r: Path => Rule[I, J]): Rule[I, O] =
-  //   Reader[I](this).read(sub)
+  def read[I, J, O](sub: => Rule[J, O])(implicit r: Path => Rule[I, J]): Rule[I, O] =
+    Reader[I](this).read(sub)
 
   def read[I, O](implicit r: Path => Rule[I, O]): Rule[I, O] =
     Reader[I](this).read[O]
