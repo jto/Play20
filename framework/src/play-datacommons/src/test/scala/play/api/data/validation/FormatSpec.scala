@@ -25,7 +25,7 @@ object FormatSpec extends Specification {
       f.writes(1L) mustEqual(m)
       f.validate(m) mustEqual(Success(1L))
 
-      (Path \ "id").from[UrlFormEncoded](f).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
+      (Path \ "id").from[UrlFormEncoded](f.toRule).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
     }
 
     "serialize and deserialize String" in {
@@ -41,7 +41,7 @@ object FormatSpec extends Specification {
       f.writes("CAFEBABE") mustEqual(m)
       f.validate(m) mustEqual(Success("CAFEBABE"))
 
-      (Path \ "id").from[UrlFormEncoded](f).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
+      (Path \ "id").from[UrlFormEncoded](f.toRule).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
     }
 
     "serialize and deserialize Seq[String]" in {
@@ -59,8 +59,6 @@ object FormatSpec extends Specification {
     	import Rules._
     	import Writes._
 
-    	import Format._
-
 	    implicit val userF: Format[UrlFormEncoded, User] = Formatting[UrlFormEncoded] { __ =>
 				((__ \ "id").format[Long] ~
 			   (__ \ "name").format[String])(User.apply _, unlift(User.unapply _))
@@ -68,8 +66,6 @@ object FormatSpec extends Specification {
 
 			val m = Map("id" -> Seq("1"), "name" -> Seq("Luigi"))
 			userF.validate(m) mustEqual(Success(luigi))
-
-			success
 		}
 
 	}
