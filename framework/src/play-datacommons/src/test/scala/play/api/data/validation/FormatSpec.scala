@@ -59,6 +59,8 @@ object FormatSpec extends Specification {
     	import Rules._
     	import Writes._
 
+    	import Format._
+
 	    implicit val userF: Format[UrlFormEncoded, User] = Formatting[UrlFormEncoded] { __ =>
 				((__ \ "id").format[Long] ~
 			   (__ \ "name").format[String])(User.apply _, unlift(User.unapply _))
@@ -66,6 +68,8 @@ object FormatSpec extends Specification {
 
 			val m = Map("id" -> Seq("1"), "name" -> Seq("Luigi"))
 			userF.validate(m) mustEqual(Success(luigi))
+
+			success
 		}
 
 	}
