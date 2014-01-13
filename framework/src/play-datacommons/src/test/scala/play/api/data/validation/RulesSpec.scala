@@ -311,7 +311,7 @@ object RulesSpec extends Specification {
         "password" -> Seq("s3cr3t"),
         "verify" -> Seq("bam"))
 
-      val passRule = From[UrlFormEncoded] { __ =>
+      val passRule: Rule[UrlFormEncoded, String] = From[UrlFormEncoded] { __ =>
         ((__ \ "password").read(notEmpty) ~ (__ \ "verify").read(notEmpty))
           .tupled.compose(Rule.uncurry(Rules.equalTo[String]).repath(_ => (Path \ "verify")))
       }

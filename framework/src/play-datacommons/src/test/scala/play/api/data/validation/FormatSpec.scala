@@ -25,7 +25,7 @@ object FormatSpec extends Specification {
       f.writes(1L) mustEqual(m)
       f.validate(m) mustEqual(Success(1L))
 
-      (Path \ "id").from[UrlFormEncoded](f.toRule).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
+      (Path \ "id").from[UrlFormEncoded](f).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
     }
 
 
@@ -42,7 +42,7 @@ object FormatSpec extends Specification {
       f.writes("CAFEBABE") mustEqual(m)
       f.validate(m) mustEqual(Success("CAFEBABE"))
 
-      (Path \ "id").from[UrlFormEncoded](f.toRule).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
+      (Path \ "id").from[UrlFormEncoded](f).validate(Map.empty) mustEqual(Failure(Seq(Path \ "id" -> Seq(ValidationError("error.required")))))
     }
 
     "serialize and deserialize Seq[String]" in {
@@ -67,6 +67,13 @@ object FormatSpec extends Specification {
 
 			val m = Map("id" -> Seq("1"), "name" -> Seq("Luigi"))
 			userF.validate(m) mustEqual(Success(luigi))
+
+			// val fin = From[UrlFormEncoded] { __ =>
+			// 	(__ \ "user").read[User]
+			// }
+
+			// val m2 = Map("user.id" -> Seq("1"), "user.name" -> Seq("Luigi"))
+			// fin.validate(m2) mustEqual(Success(luigi))
 		}
 
 		"support primitives types" in {
@@ -311,43 +318,39 @@ object FormatSpec extends Specification {
         "name" -> Seq("bob"),
         "friend.name" -> Seq("tom"))
 
-      // "using explicit notation" in {
-      //   lazy val w: Rule[UrlFormEncoded, RecUser] = From[UrlFormEncoded]{ __ =>
-      //     ((__ \ "name").read[String] ~
-      //      (__ \ "friends").read(seqR(w)))(RecUser.apply _)
-      //   }
-      //   w.validate(m) mustEqual Success(u)
+      "using explicit notation" in {
+      	import Rules._
+    		import Writes._
 
-      //   lazy val w2: Rule[UrlFormEncoded, RecUser] =
-      //     ((Path \ "name").read[UrlFormEncoded, String] ~
-      //      (Path \ "friends").from[UrlFormEncoded](seqR(w2)))(RecUser.apply _)
-      //   w2.validate(m) mustEqual Success(u)
+        lazy val w: Format[UrlFormEncoded, RecUser] = Formatting[UrlFormEncoded]{ __ =>
+          ((__ \ "name").format[String] ~
+           (__ \ "friends").format(seqR(w), seqW(w)))(RecUser.apply _, unlift(RecUser.unapply _))
+        }
+        w.validate(m) mustEqual Success(u)
 
-      //   lazy val w3: Rule[UrlFormEncoded, User1] = From[UrlFormEncoded]{ __ =>
-      //     ((__ \ "name").read[String] ~
-      //      (__ \ "friend").read(optionR(w3)))(User1.apply _)
-      //   }
-      //   w3.validate(m1) mustEqual Success(u1)
-      // }
+        lazy val w3: Format[UrlFormEncoded, User1] = Formatting[UrlFormEncoded]{ __ =>
+          ((__ \ "name").format[String] ~
+           (__ \ "friend").format(optionR(w3), optionW(w3)))(User1.apply _, unlift(User1.unapply _))
+        }
+        w3.validate(m1) mustEqual Success(u1)
+      }
 
-    //   "using implicit notation" in {
-    //   	import Rules._
-				// import Writes._
+      "using implicit notation" in {
+      	import Rules._
+				import Writes._
 
-    //     implicit lazy val w: Format[UrlFormEncoded, RecUser] = Formatting[UrlFormEncoded]{ __ =>
-    //       ((__ \ "name").format[String] ~
-    //        (__ \ "friends").format[Seq[RecUser]])(RecUser.apply _)
-    //     }
-    //     w.validate(m) mustEqual Success(u)
+        implicit lazy val w: Format[UrlFormEncoded, RecUser] = Formatting[UrlFormEncoded]{ __ =>
+          ((__ \ "name").format[String] ~
+           (__ \ "friends").format[Seq[RecUser]])(RecUser.apply _, unlift(RecUser.unapply _))
+        }
+        w.validate(m) mustEqual Success(u)
 
-        // implicit lazy val w3: Rule[UrlFormEncoded, User1] = From[UrlFormEncoded]{ __ =>
-        //   ((__ \ "name").read[String] ~
-        //    (__ \ "friend").read[Option[User1]])(User1.apply _)
-        // }
-        // w3.validate(m1) mustEqual Success(u1)
-
-      // }
-      success
+        implicit lazy val w3: Format[UrlFormEncoded, User1] = Formatting[UrlFormEncoded]{ __ =>
+          ((__ \ "name").format[String] ~
+           (__ \ "friend").format[Option[User1]])(User1.apply _, unlift(User1.unapply _))
+        }
+        w3.validate(m1) mustEqual Success(u1)
+      }
     }
 
 	}

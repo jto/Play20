@@ -4,12 +4,10 @@ import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
 
 @implicitNotFound("No Format found for types ${I}, ${O}. Try to implement an implicit Format[${I}, ${O}].")
-trait Format[I, O] {
-   def validate(data: I): VA[I, O]
-   def writes(i: O): I
+trait Format[I, O] extends RuleLike[I, O] with WriteLike[O, I] {
 
-   def toRule = Rule[I, O](this.validate _)
-   def toWrite = Write[O, I](this.writes _)
+  def toRule = Rule.toRule(this)
+  def toWrite = Write.toWrite(this)
 
    // TODO
    // def bimap = ???
@@ -18,9 +16,9 @@ trait Format[I, O] {
 /**
  * Default formatters.
  */
-object Format extends DefaultFormat {
+object Format {
 
-  def apply[I, O](r: Rule[I, O], w: Write[O, I]): Format[I, O] = {
+  def apply[I, O](r: RuleLike[I, O], w: WriteLike[O, I]): Format[I, O] = {
     new Format[I, O] {
       def validate(i: I) = r.validate(i)
       def writes(o: O) = w.writes(o)
@@ -45,15 +43,4 @@ object Format extends DefaultFormat {
   implicit def fboFormat[I: Monoid, O](f: Format[I, O])(implicit fcb: FunctionalCanBuild[({ type λ[O] = Format[I, O] })#λ]) =
     toFunctionalBuilderOps[({ type λ[O] = Format[I, O] })#λ, O](f)(fcb)
 
-}
-
-/**
- * Default formatters.
- */
-trait DefaultFormat {
-  // implicit def GenericFormat[I, O](implicit r: Rule[I, O], w: Write[O, I]): Format[I, O] =
-  //   Format(r, w)
-
-  // implicit def pickPath[I, O](p: Path)(implicit fr: Path => Rule[I, O], fw: Path => Write[O, I]): Format[I, O] =
-  // 	Format(fr(p), fw(p))
 }
