@@ -474,5 +474,38 @@ object RulesSpec extends Specification {
 
     }
 
+
+    "completely generic" in {
+      type OptString[In] = Rule[String, String] => Path => Rule[In, Option[String]]
+
+      def genR[In](opt: OptString[In])(implicit exs: Path => Rule[In, String]) =
+        From[In] { __ =>
+          ((__ \ "name").read(notEmpty) ~
+           (__ \ "color").read(opt(notEmpty))).tupled
+        }
+
+      val jsonR = {
+        import play.api.data.mapping.json.Rules._
+        genR[JsValue](optionR(_))
+      }
+
+      val json = Json.obj("name" -> "bob", "color" -> "blue")
+      val invalidJson = Json.obj("color" -> "blue")
+
+      jsonR.validate(json) mustEqual Success(("bob", Some("blue")))
+      jsonR.validate(invalidJson) mustEqual Failure(Seq((Path \ "name", Seq(ValidationError("error.required")))))
+
+
+       val formR = {
+        import play.api.data.mapping.Rules._
+        genR[UrlFormEncoded](optionR(_))
+      }
+      val form = Map("name" -> Seq("bob"), "color" -> Seq("blue"))
+      val invalidForm = Map("color" -> Seq("blue"))
+
+      formR.validate(form) mustEqual Success(("bob", Some("blue")))
+      formR.validate(invalidForm) mustEqual Failure(Seq((Path \ "name", Seq(ValidationError("error.required")))))
+    }
+
   }
 }
