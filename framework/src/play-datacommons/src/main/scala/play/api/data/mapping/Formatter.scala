@@ -146,9 +146,18 @@ object Formatting {
 
 case class Formatter[I](path: Path = Path(Nil)) {
 
-  // def format[J](sub: => Format[J, O])(implicit r: Path => Format[I, J]): Format[I, O] = ???
-  def format[O](implicit f: Path => Format[I, O]): Format[I, O] =
-    f(path)
+  def format[JJ, J, O](subR: => Rule[J, O], subW: => Write[O, JJ])(implicit r: Path => Rule[I, J], w: Path => Write[JJ, I]): Format[I, O] = {
+    Format[I, O](r(path).compose(path)(subR), subW compose w(path))
+  }
+
+  def format[J, O](subR: Rule[J, O])(implicit r: Path => Rule[I, J], w: Path => Write[O, I]): Format[I, O] =
+    format(subR, Write.zero[O])
+
+  def format[JJ, O](subW: Write[O, JJ])(implicit r: Path => Rule[I, O], w: Path => Write[JJ, I]): Format[I, O] =
+    format(Rule.zero[O], subW)
+
+  def format[O](implicit r: Path => Rule[I, O], w: Path => Write[O, I]): Format[I, O] =
+    format(Rule.zero[O])
 
   def \(key: String): Formatter[I] = Formatter(path \ key)
   def \(idx: Int): Formatter[I] = Formatter(path \ idx)

@@ -11,6 +11,7 @@ trait Format[I, O] {
    def toRule = Rule[I, O](this.validate _)
    def toWrite = Write[O, I](this.writes _)
 
+   // TODO
    // def bimap = ???
 }
 
@@ -53,6 +54,6 @@ trait DefaultFormat {
   // implicit def GenericFormat[I, O](implicit r: Rule[I, O], w: Write[O, I]): Format[I, O] =
   //   Format(r, w)
 
-  implicit def pickPath[I, O](p: Path)(implicit fr: Path => Rule[I, O], fw: Path => Write[O, I]): Format[I, O] =
-  	Format(fr(p), fw(p))
+  // implicit def pickPath[I, O](p: Path)(implicit fr: Path => Rule[I, O], fw: Path => Write[O, I]): Format[I, O] =
+  // 	Format(fr(p), fw(p))
 }
