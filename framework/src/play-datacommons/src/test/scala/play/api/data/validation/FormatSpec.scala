@@ -327,12 +327,14 @@ object FormatSpec extends Specification {
            (__ \ "friends").format(seqR(w), seqW(w)))(RecUser.apply _, unlift(RecUser.unapply _))
         }
         w.validate(m) mustEqual Success(u)
+        w.writes(u) mustEqual (m - "friends[0].friends")
 
         lazy val w3: Format[UrlFormEncoded, User1] = Formatting[UrlFormEncoded]{ __ =>
           ((__ \ "name").format[String] ~
            (__ \ "friend").format(optionR(w3), optionW(w3)))(User1.apply _, unlift(User1.unapply _))
         }
         w3.validate(m1) mustEqual Success(u1)
+        w3.writes(u1) mustEqual m1
       }
 
       "using implicit notation" in {
@@ -344,12 +346,14 @@ object FormatSpec extends Specification {
            (__ \ "friends").format[Seq[RecUser]])(RecUser.apply _, unlift(RecUser.unapply _))
         }
         w.validate(m) mustEqual Success(u)
+        w.writes(u) mustEqual (m - "friends[0].friends")
 
         implicit lazy val w3: Format[UrlFormEncoded, User1] = Formatting[UrlFormEncoded]{ __ =>
           ((__ \ "name").format[String] ~
            (__ \ "friend").format[Option[User1]])(User1.apply _, unlift(User1.unapply _))
         }
         w3.validate(m1) mustEqual Success(u1)
+        w3.writes(u1) mustEqual m1
       }
     }
 
