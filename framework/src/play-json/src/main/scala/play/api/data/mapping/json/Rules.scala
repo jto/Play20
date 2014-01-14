@@ -26,54 +26,54 @@ object Rules extends play.api.data.mapping.DefaultRules[JsValue] {
       case IdxPathNode(i) => JIdxPathNode(i)
     })
 
-  private def jsonAs[T](f: PartialFunction[JsValue, Validation[ValidationError, T]])(args: Any*) =
+  private def jsonAs[T](f: PartialFunction[JsValue, Validation[ValidationError, T]])(msg: String, args: Any*) =
     Rule.fromMapping[JsValue, T](
       f.orElse {
-        case j => Failure(Seq(ValidationError("error.invalid", args: _*)))
+        case j => Failure(Seq(ValidationError(msg, args: _*)))
       })
 
   implicit def stringR = jsonAs[String] {
     case JsString(v) => Success(v)
-  }("String")
+  }("error.invalid", "String")
 
   implicit def booleanR = jsonAs[Boolean] {
     case JsBoolean(v) => Success(v)
-  }("Boolean")
+  }("error.invalid", "Boolean")
 
   // Note: Mappings of JsNumber to Number are validating that the JsNumber is indeed valid
   // in the target type. i.e: JsNumber(4.5) is not considered parseable as an Int.
   // That's a bit stricter than the "old" Read, which just cast to the target type, possibly loosing data.
   implicit def intR = jsonAs[Int] {
     case JsNumber(v) if v.isValidInt => Success(v.toInt)
-  }("Int")
+  }("error.number", "Int")
 
   implicit def shortR = jsonAs[Short] {
     case JsNumber(v) if v.isValidShort => Success(v.toShort)
-  }("Short")
+  }("error.number","Short")
 
   implicit def longR = jsonAs[Long] {
     case JsNumber(v) if v.isValidLong => Success(v.toLong)
-  }("Long")
+  }("error.number","Long")
 
   implicit def jsNumberR = jsonAs[JsNumber] {
     case v @ JsNumber(_) => Success(v)
-  }("Number")
+  }("error.number","Number")
 
   implicit def jsBooleanR = jsonAs[JsBoolean] {
     case v @ JsBoolean(_) => Success(v)
-  }("Boolean")
+  }("error.invalid", "Boolean")
 
   implicit def jsStringR = jsonAs[JsString] {
     case v @ JsString(_) => Success(v)
-  }("String")
+  }("error.invalid", "String")
 
   implicit def jsObjectR = jsonAs[JsObject] {
     case v @ JsObject(_) => Success(v)
-  }("Object")
+  }("error.invalid", "Object")
 
   implicit def jsArrayR = jsonAs[JsArray] {
     case v @ JsArray(_) => Success(v)
-  }("Array")
+  }("error.invalid", "Array")
 
   // BigDecimal.isValidFloat is buggy, see [SI-6699]
   import java.{ lang => jl }
@@ -83,7 +83,7 @@ object Rules extends play.api.data.mapping.DefaultRules[JsValue] {
   }
   implicit def floatR = jsonAs[Float] {
     case JsNumber(v) if isValidFloat(v) => Success(v.toFloat)
-  }("Float")
+  }("error.number", "Float")
 
   // BigDecimal.isValidDouble is buggy, see [SI-6699]
   private def isValidDouble(bd: BigDecimal) = {
@@ -92,31 +92,35 @@ object Rules extends play.api.data.mapping.DefaultRules[JsValue] {
   }
   implicit def doubleR = jsonAs[Double] {
     case JsNumber(v) if isValidDouble(v) => Success(v.toDouble)
-  }("Double")
+  }("error.number", "Double")
 
   implicit def bigDecimal = jsonAs[BigDecimal] {
     case JsNumber(v) => Success(v)
-  }("BigDecimal")
+  }("error.number", "BigDecimal")
 
   import java.{ math => jm }
   implicit def javaBigDecimal = jsonAs[jm.BigDecimal] {
     case JsNumber(v) => Success(v.bigDecimal)
-  }("BigDecimal")
+  }("error.number", "BigDecimal")
 
   implicit val jsNullR = jsonAs[JsNull.type] {
     case JsNull => Success(JsNull)
-  }("null")
+  }("error.invalid", "null")
 
-  implicit def ooo[O](p: Path)(implicit pick: Path => Rule[JsValue, JsValue], coerce: Rule[JsValue, O]): Rule[JsValue, Option[O]] =
+  implicit def ooo[O](p: Path)(implicit pick: Path => RuleLike[JsValue, JsValue], coerce: RuleLike[JsValue, O]): Rule[JsValue, Option[O]] =
     optionR(Rule.zero[O])(pick, coerce)(p)
 
-  def optionR[J, O](r: => Rule[J, O], noneValues: Rule[JsValue, JsValue]*)(implicit pick: Path => Rule[JsValue, JsValue], coerce: Rule[JsValue, J]): Path => Rule[JsValue, Option[O]] = super.opt[J, O](r, (jsNullR.fmap(n => n: JsValue) +: noneValues): _*)
+  def optionR[J, O](r: => RuleLike[J, O], noneValues: RuleLike[JsValue, JsValue]*)(implicit pick: Path => RuleLike[JsValue, JsValue], coerce: RuleLike[JsValue, J]): Path => Rule[JsValue, Option[O]] =
+    super.opt[J, O](r, (jsNullR.fmap(n => n: JsValue) +: noneValues): _*)
 
-  implicit def mapR[O](implicit r: Rule[JsValue, O]): Rule[JsValue, Map[String, O]] =
+  implicit def mapR[O](implicit r: RuleLike[JsValue, O]): Rule[JsValue, Map[String, O]] =
     super.mapR[JsValue, O](r, jsObjectR.fmap { case JsObject(fs) => fs })
 
-  implicit def pickInJson[O](p: Path)(implicit r: Rule[JsValue, O]): Rule[JsValue, O] =
-    Rule[JsValue, JsValue] { json =>
+  implicit def JsValue[O](implicit r: RuleLike[JsObject, O]): Rule[JsValue, O] =
+    jsObjectR.compose(r)
+
+  implicit def pickInJson[II <: JsValue, O](p: Path)(implicit r: RuleLike[JsValue, O]): Rule[II, O] =
+    Rule[II, JsValue] { json =>
       pathToJsPath(p)(json) match {
         case Nil => Failure(Seq(Path -> Seq(ValidationError("error.required"))))
         case js :: _ => Success(js)
@@ -124,12 +128,12 @@ object Rules extends play.api.data.mapping.DefaultRules[JsValue] {
     }.compose(r)
 
   // // XXX: a bit of boilerplate
-  private def pickInS[T](implicit r: Rule[Seq[JsValue], T]): Rule[JsValue, T] =
+  private def pickInS[T](implicit r: RuleLike[Seq[JsValue], T]): Rule[JsValue, T] =
     jsArrayR.fmap { case JsArray(fs) => fs }.compose(r)
-  implicit def pickSeq[O](implicit r: Rule[JsValue, O]) = pickInS(seqR[JsValue, O])
-  implicit def pickSet[O](implicit r: Rule[JsValue, O]) = pickInS(setR[JsValue, O])
-  implicit def pickList[O](implicit r: Rule[JsValue, O]) = pickInS(listR[JsValue, O])
-  implicit def pickArray[O: scala.reflect.ClassTag](implicit r: Rule[JsValue, O]) = pickInS(arrayR[JsValue, O])
-  implicit def pickTraversable[O](implicit r: Rule[JsValue, O]) = pickInS(traversableR[JsValue, O])
+  implicit def pickSeq[O](implicit r: RuleLike[JsValue, O]) = pickInS(seqR[JsValue, O])
+  implicit def pickSet[O](implicit r: RuleLike[JsValue, O]) = pickInS(setR[JsValue, O])
+  implicit def pickList[O](implicit r: RuleLike[JsValue, O]) = pickInS(listR[JsValue, O])
+  implicit def pickArray[O: scala.reflect.ClassTag](implicit r: RuleLike[JsValue, O]) = pickInS(arrayR[JsValue, O])
+  implicit def pickTraversable[O](implicit r: RuleLike[JsValue, O]) = pickInS(traversableR[JsValue, O])
 
 }
