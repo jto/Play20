@@ -1,6 +1,5 @@
 package play.api.data.mapping
 
-
 trait RuleLike[I, O] {
   /**
    * Apply the Rule to `data`

@@ -49,15 +49,15 @@ object Rules extends play.api.data.mapping.DefaultRules[JsValue] {
 
   implicit def shortR = jsonAs[Short] {
     case JsNumber(v) if v.isValidShort => Success(v.toShort)
-  }("error.number","Short")
+  }("error.number", "Short")
 
   implicit def longR = jsonAs[Long] {
     case JsNumber(v) if v.isValidLong => Success(v.toLong)
-  }("error.number","Long")
+  }("error.number", "Long")
 
   implicit def jsNumberR = jsonAs[JsNumber] {
     case v @ JsNumber(_) => Success(v)
-  }("error.number","Number")
+  }("error.number", "Number")
 
   implicit def jsBooleanR = jsonAs[JsBoolean] {
     case v @ JsBoolean(_) => Success(v)
