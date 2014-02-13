@@ -65,6 +65,18 @@ object Person2{
   }
 }
 
+case class ManyApplies(foo: String, bar: Int)
+object ManyApplies {
+  def apply(x: Option[Int]) = 9
+  def apply(y: String) = 4
+  def apply(x: String, y: String) = 10
+}
+
+trait NotAClass
+case class AClass(foo: Int) extends NotAClass
+object NotAClass {
+  def apply(x: Int) = AClass(x)
+}
 
 object MacroSpec extends Specification {
 
@@ -264,6 +276,40 @@ object MacroSpec extends Specification {
 
       userFormat.validate(userMap) must beEqualTo(Success(user))
       userFormat.writes(user) must beEqualTo(userMap)
+    }
+
+    "create Rules for classes with overloaded apply method" in {
+      import Rules._
+
+      implicit val manyAppliesRule = Rule.gen[UrlFormEncoded, ManyApplies]
+
+      manyAppliesRule.validate(
+        Map(
+          "foo" -> Seq("bob"),
+          "bar" -> Seq("3"))
+      ) must beEqualTo(
+        Success(
+          ManyApplies(
+            "bob",
+            3
+          )
+        )
+      )
+    }
+
+    "create Rules for traits with single apply method" in {
+      import Rules._
+
+      implicit val notAClassRule = Rule.gen[UrlFormEncoded, NotAClass]
+
+      notAClassRule.validate(
+        Map(
+          "x" -> Seq("3"))
+      ) must beEqualTo(
+        Success(
+          AClass(3)
+        )
+      )
     }
 
     "manage Boxed class" in {
