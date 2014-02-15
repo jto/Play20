@@ -109,7 +109,7 @@ object MappingMacros {
     }
 
     // XXX: recursive values need the user to use explcitly typed implicit val
-    c.Expr[Write[I, O]](q"""play.api.data.mapping.To[${typeO}] { __ => $body }""")
+    c.Expr[Write[I, O]](q"""{ import play.api.libs.functional.syntax._; play.api.data.mapping.To[${typeO}] { __ => $body } }""")
   }
 
   def rule[I: c.WeakTypeTag, O: c.WeakTypeTag](c: Context): c.Expr[Rule[I, O]] = {
@@ -152,7 +152,7 @@ object MappingMacros {
     }
 
     // XXX: recursive values need the user to use explcitly typed implicit val
-    c.Expr[Rule[I, O]](q"""play.api.data.mapping.From[${typeI}] { __ => $body }""")
+    c.Expr[Rule[I, O]](q"""{ import play.api.libs.functional.syntax._; play.api.data.mapping.From[${typeI}] { __ => $body } }""")
   }
 
   def format[IR: c.WeakTypeTag, IW: c.WeakTypeTag, O: c.WeakTypeTag](c: Context): c.Expr[Format[IR, IW, O]] = {
